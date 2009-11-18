@@ -1,0 +1,116 @@
+body {
+	font-family: "Lucida Grande", Verdana, arial, sans-serif;
+	font-size:12px;	
+}
+
+div {
+	display:block;	
+}
+
+div.content {
+	margin:10px;
+	position:relative;	
+}
+
+div.pyramid {
+	position:absolute;
+	width:62%;
+	top:0px;
+	left:0px;
+}
+
+div.info {
+	border:solid 1px #000099;
+	background-color:#EEEEFF;
+	position:absolute;
+	width:28%;
+	top:0px;
+	left:69%;
+}
+
+div.layer {
+	text-align:center;
+	clear:both;
+	overflow:hidden;
+	padding-top:3px;
+	height:56px;
+}
+
+div.player {
+	border:solid 1px #EFEFEF;
+	background-color:#EFEFEF;	
+	display:inline-block;
+	width:70px;
+	height:50px;
+	margin-right:5px;
+	font-weight:bold;
+	color:black;
+	cursor:pointer;
+}
+
+div.uitgedaagd {
+	opacity:0.5;
+	-moz-opacity:0.5;	
+}
+
+div.player div.wrapper {
+	margin:5px;
+}
+
+div.selected {
+	border:solid 1px #0000FF;
+	color:black;
+	background-color:#0099CC;
+	opacity:1.0;
+	-moz-opacity:1.0;
+}
+
+div.won {
+	background-color:#00FF00;
+	border:solid 1px #009900;
+	color:black;
+}
+
+div.lost {
+	background-color:#FF0000;
+	border:solid 1px #990000;
+	color:white;	
+}
+
+span#player-naam {
+	font-size:14px;
+	color:#CC0099;
+	font-weight:bold;	
+}
+
+table#games {
+	width:100%;	
+}
+
+td.game-player, td.game-date, td.game-score {
+	font-size:10px;	
+	border-top:solid 1px #A0A0A0;
+	border-right:solid 1px #A0A0A0;
+	margin-bottom:1px;
+	padding:2px;
+}
+
+td.game-score, td.game-player {
+	font-weight:bold;	
+	width:40px;
+}
+
+div#player-naam {
+	color:white;
+	background-color:#cc0099;
+	font-weight:bold;
+	font-size:15px;	
+	padding:5px;
+}
+
+div.header {
+	background-color:#0099CC;
+	color:white;
+	font-weight:bold;	
+	padding:2px;
+}
