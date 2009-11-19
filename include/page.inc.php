@@ -1,9 +1,29 @@
 <?php
-$DB = mysql_connect("", "", "");
+$DB = mysql_connect("localhost", "web", "w3bw3b");
 mysql_select_db("pyramid",$DB);
 
 $Base = "/pyramid";
 $TablePrefix = "pyramid_";
+
+function RequireValidPassword($username, $password) {
+	if(!($username==$password)) {
+		Error("Ongeldig wachtwoord; probeer het opnieuw!");	
+	}	
+}
+
+function RequireInput($paramName) {
+	if(!array_key_exists($paramName,$_REQUEST)) {
+		Error("Parameter '".htmlentities($paramName)."' was niet ingesteld");	
+	}	
+	return Get($paramName);
+}
+
+function Get($paramName) {
+	if(get_magic_quotes_gpc()) {
+		return stripslashes($_REQUEST[$paramName]);	
+	}
+	return $_REQUEST[$paramName];	
+}
 
 function Query($q, $v=array()) {
 	global $DB;
@@ -37,17 +57,22 @@ function Query($q, $v=array()) {
 	}
 	
 	$result = mysql_query($q, $DB);
+	//echo "<code>".htmlentities($q)."</code>: ".mysql_affected_rows()." affected<hr/>";
 	
 	if(mysql_errno($DB)) {
-           Error(mysql_error($DB));
+           Error(mysql_error($DB)."<br/><br/>Query: <pre>$q</pre>");
 	}
 	
-	$data = array();
-	$n = mysql_num_rows($result);
-	for($a=0;$a<$n;$a++) {
-		 $data[] = mysql_fetch_object($result);
+	if(is_resource($result)) {
+		$data = array();
+		$n = mysql_num_rows($result);
+		for($a=0;$a<$n;$a++) {
+			 $data[] = mysql_fetch_object($result);
+		}
+		
+		return $data;
 	}
-	return $data;
+	return array();
 }
 
 function Head($title,$links=array()) {
@@ -63,7 +88,7 @@ function Foot() {
 
 function Error($msg) {
     Head("Fout");
-    echo "<p>Fout: $msg</p>";
+    echo "<p>Fout: $msg</p> <a href=\".\">Terug</a>";
     Foot();
     die;
 }

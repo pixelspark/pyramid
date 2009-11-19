@@ -1,6 +1,41 @@
 <?php
 require_once("include/page.inc.php");
 
+$Action = Get("action");
+if($Action=="uitdagen") {
+	$userid = RequireInput("username");
+	$password = RequireInput("password");
+	$playerbid = RequireInput("playerb");
+	RequireValidPassword($userid, $password);	
+	
+	Query("UPDATE %%players AS pa, %%players AS pb SET pa.player_uitgedaagd=pb.player_id, pb.player_uitgedaagd=pa.player_id WHERE pa.player_id=? AND pb.player_id=? AND pa.player_uitgedaagd=0 AND pb.player_uitgedaagd=0 AND (pa.player_level=pb.player_level OR pa.player_level=pb.player_level+1)", $userid, $playerbid);
+}
+else if($Action=="uitslaginvoeren") {
+	$userid = RequireInput("username");
+	$password = RequireInput("password");
+	$scorea = RequireInput("scorea");
+	$scoreb = RequireInput("scoreb");
+	if(!is_numeric($scorea) || !is_numeric($scoreb) || $scorea < 0 || $scoreb < 0) {
+		Error("Ongeldige score ingevoerd");	
+	}
+	RequireValidPassword($userid, $password);	
+	
+	Query("START TRANSACTION");
+	$levelChange = "";
+	if($scorea<$scoreb) {
+		$levelChange = ", pa.player_level=IF(pa.player_level>pb.player_level, pa.player_level, pb.player_level), pb.player_level=IF(pa.player_level<pb.player_level, pa.player_level, pb.player_level)";
+	}
+	else if($scorea>$scoreb) {
+		$levelChange = ", pa.player_level=IF(pa.player_level<pb.player_level, pa.player_level, pb.player_level), pb.player_level=IF(pa.player_level>pb.player_level, pa.player_level, pb.player_level)";
+	}
+	
+	Query("INSERT INTO %%games (game_playera, game_playerb, game_scorea, game_scoreb, game_date) VALUES (?,(SELECT player_uitgedaagd FROM %%players WHERE player_id=?),?,?,NOW())", $userid, $userid, $scorea, $scoreb);
+	
+	Query("UPDATE %%players AS pa, %%players AS pb SET pa.player_uitgedaagd=0, pb.player_uitgedaagd=0 ".$levelChange." WHERE pa.player_id=? AND pb.player_id=pa.player_uitgedaagd AND pb.player_uitgedaagd=pa.player_id AND (pa.player_level=pb.player_level OR ABS(pa.player_level-pb.player_level)<2)", $userid);
+	Query("COMMIT");
+		
+}
+
 Head("Overzicht");
 $Players = Query("SELECT * FROM %%players ORDER BY player_level ASC");
 $Winners = Query("SELECT winner, loser, COUNT(game_id) AS times FROM %%winners GROUP BY winner, loser");
@@ -15,93 +50,13 @@ $Games = Query("SELECT game_playera, game_playerb, playera.player_name AS aname,
 	var player_lost = <?php echo JSONSerialize($PlayerLost) ?>;
 	var players = <?php echo JSONSerialize($Players); ?>;
 	var games = <?php echo JSONSerialize($Games); ?>;
-
-	 $(document).ready(function(){
-	 	$("div.player").mouseover(function() {
-	 		$("div.player").removeClass("selected");
-	 		$("div.player").removeClass("won");
-	 		$("div.player").removeClass("lost");
-	 		$(this).addClass("selected");	
-	 		
-	 		var playerID = this.id.substr(7);
-	 		
-	 		// Naam ophalen
-	 		for(var w in players) {
-	 			if(players[w].player_id==playerID) {
-	 				$(document.getElementById("player-naam")).text(players[w].player_name);	
-	 			}
-	 		}
-	 		
-	 		// Games laten zien
-	 		var gamesTable = document.getElementById('games');
-	 		if(gamesTable.hasChildNodes()) {
-			    while(gamesTable.childNodes.length >= 1) {
-			        gamesTable.removeChild(gamesTable.firstChild);  
-			    } 
-			}
-			
-			for(var w in games) {
-				var game = games[w];
-				if(game.game_playera==playerID || game.game_playerb==playerID) {
-					var tr = document.createElement("TR");
-					var tda = document.createElement("TD");	
-					var tdb = document.createElement("TD");	
-					var tdd = document.createElement("TD");
-					var tds = document.createElement("TD");	
-					$(tda).addClass("game-player");
-					$(tda).text(game.aname);
-					$(tdb).addClass("game-player");
-					$(tdb).text(game.bname);
-					$(tdd).addClass("game-date");
-					$(tdd).text(game.game_date);
-					$(tds).addClass("game-score");
-					$(tds).text(game.game_scorea+"-"+game.game_scoreb);
-					tr.appendChild(tda);
-					tr.appendChild(tdb);
-					tr.appendChild(tdd);
-					tr.appendChild(tds);
-					gamesTable.appendChild(tr);
-				}	
-			}
-
-	 		
-	 		// Show stats
-	 		var doelsaldo = 0;
-	 		$(document.getElementById("games-gewonnen")).text("0");
-	 		for(var w in player_won) {
-	 			var data = player_won[w];
-	 			if(data.player==playerID) {
-	 				$(document.getElementById("games-gewonnen")).text(data.times + " game(s) (+"+data.totalscore+" punten)");
-	 				doelsaldo = data.totalscore;
-	 			}		
-	 		}
-	 		
-	 		$(document.getElementById("games-verloren")).text("0");
-	 		for(var w in player_lost) {
-	 			var data = player_lost[w];
-	 			if(data.player==playerID) {
-	 				$(document.getElementById("games-verloren")).text(data.times + " game(s) (-"+data.totalscore+" punten)");
-	 				doelsaldo -= data.totalscore;
-	 			}		
-	 		}
-	 		
-	 		$(document.getElementById("doelsaldo")).text(doelsaldo);
-	 		
-	 		// Show better and worse players
-	 		for(var w in winners) {
-	 			var data = winners[w];
-	 			if(data.winner==playerID) {
-	 				$(document.getElementById("player-"+data.loser)).addClass("won");	
-	 			}
-	 			else if(data.loser==playerID) {
-	 				$("div#player-"+data.winner).addClass("lost");	
-	 			}
-	 		}
-	 	});
-	 });
-
 </script>
 
+<script type="text/javascript" src="pyramid.js"></script>
+
+<div class="links">
+	<a href="http://www.intermate.nl/">Intermate</a> 
+</div>
 <div class="content">
 	<div class="pyramid">
 		<?php
@@ -119,7 +74,7 @@ $Games = Query("SELECT game_playera, game_playerb, playera.player_name AS aname,
 			
 			$player = $Players[$a];
 			if($player->player_level==$currentLayer) {
-				echo "<div id=\"player-".$player->player_id."\" class=\"player ".($player->player_uitgedaagd==1?"uitgedaagd":"")."\"><div class=\"wrapper\">";
+				echo "<div id=\"player-".$player->player_id."\" class=\"player ".($player->player_uitgedaagd!=0?"uitgedaagd":"")."\"><div class=\"wrapper\">";
 				echo $player->player_name;
 				echo "</div></div>";
 			}
@@ -129,6 +84,59 @@ $Games = Query("SELECT game_playera, game_playerb, playera.player_name AS aname,
 			}
 		}
 		?>
+		<div class="forms">
+			<div class="header">Control panel</div>
+			<form action="." method="post">
+				<input type="hidden" name="action" id="post_action" value="none" />
+				<div style="margin:5px;">
+					Naam: 
+					<select id="username" name="username" style="width:90px;" onclick="hideControlPanel();">
+						<option></option>
+						<?php
+						for($a=0;$a<count($Players);$a++) {
+							$player = $Players[$a];
+							echo "<option value=\"".$player->player_id."\">".$player->player_name."</option>";	
+						}
+						?>
+					</select>
+				
+					Intermate-wachtwoord: <input type="password" name="password" style="width:90px;" />
+					
+					<input type="button" onclick="showControlPanel();return false;" value="OK" class="button" />
+					<a href="#" onclick="openRegisterForm();">Nog niet ingeschreven?</a>
+					
+					<div class="register-info" style="display:none;">
+						Heb je je nog niet ingeschreven in de piramide? Mail dan de naam van je Intermate-account en eventueel een gewenste
+						spelersnaam naar de sportcommissie. Als je nog geen foto hebt ingesteld op de Intermate-website, kun je dat ook meteen
+						doen. De sportcommissie zal je dan zo snel mogelijk onderaan de piramide toevoegen. Schrijf je dus snel in, want hoe later
+						je inschrijft, hoe meer spelers er boven je staan...
+					</div>
+				</div>
+			
+				<div id="actions" style="display:none;">
+					<input type="submit" value="Bevestigen" class="button" />
+				
+					<div class="uitdagen">
+						<b>Andere speler uitdagen</b>: 
+						<select name="playerb" id="otherplayers" style="width:90px;">
+						</select>
+						<span class="explanation">Als je een andere speler hebt uitgedaagd, kun je pas weer iemand anders uitdagen als je de score voor deze wedstrijd hebt ingevuld. Degene die je uitdaagt krijgt automatisch een mailtje met je uitdaging.</span>
+					</div>
+						
+					<div class="uitslaginvoeren">
+						<b>Uitslag invoeren</b>: 
+						<span class="username"></span>
+						<input type="text" value="0" name="scorea" style="width:50px;" /> - <input type="text" value="0" name="scoreb" style="width:50px;" />
+						<span id="uitdager"></span>
+						<span class="explanation">Slechts &eacute;&eacute;n van de twee spelers hoeft de score in te vullen. De andere speler wordt op de hoogte gesteld van de ingevulde score.</span>
+					</div>
+					
+					
+				</div>
+			
+		</form>
+	</div>
+
 	</div>
 	
 	<div class="info">
@@ -144,7 +152,6 @@ $Games = Query("SELECT game_playera, game_playerb, playera.player_name AS aname,
 		<div id="games-played">
 			<table cellspacing="0" cellpadding="0" id="games"><tr><td><em>Geen informatie beschikbaar</em></td></tr></table>
 		</div>
-		
 	</div>
 </div>
 

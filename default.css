@@ -28,6 +28,26 @@ div.info {
 	left:69%;
 }
 
+div.forms {
+	border:solid 1px #000099;
+	background-color:#EEEEFF;
+	display:block;
+	width:100%;
+	margin-top:10px;
+}
+
+div.forms .button {
+	width:100px;
+	font-weight:bold;
+	float:right;	
+}
+
+div#actions {
+	background-color:white;	
+	padding:5px;
+	padding-bottom:10px;
+}
+
 div.layer {
 	text-align:center;
 	clear:both;
@@ -77,6 +97,12 @@ div.lost {
 	color:white;	
 }
 
+div.undecided {
+	background-color:#FFFF00 !important;
+	border:solid 1px #FFCC00 !important;
+	color:black;	
+}
+
 span#player-naam {
 	font-size:14px;
 	color:#CC0099;
@@ -113,4 +139,34 @@ div.header {
 	color:white;
 	font-weight:bold;	
 	padding:2px;
+}
+
+div.register-info {
+	background-color:#FFFFEE;
+	border:solid 1px #FFCC00;	
+	margin-top:5px;
+	display:block;
+	padding:5px;
+}
+
+span.explanation {
+	color:#A0A0A0;
+	font-style:italic;
+	clear:both;
+	display:block;	
+}
+
+div.links, div.links a {
+	text-decoration:none;
+	color:#A0A0A0;
+	font-weight:bold;	
+}
+
+div.links a {
+	border-right:solid 1px #A0A0A0;
+	padding:5px;
+}
+
+div.links a:hover {
+	background-color:#EFEFEF;	
 }
