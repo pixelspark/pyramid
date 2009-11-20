@@ -31,15 +31,15 @@ require_once("include/page.inc.php");
 
 $Action = Get("action");
 if($Action=="uitdagen") {
-	$userid = RequireInput("username");
+	$userid = RequireInput("userid");
 	$password = RequireInput("password");
 	$playerbid = RequireInput("playerb");
 	RequireValidPassword($userid, $password);	
 	
-	Query("UPDATE %%players AS pa, %%players AS pb SET pa.player_uitgedaagd=pb.player_id, pb.player_uitgedaagd=pa.player_id WHERE pa.player_id=? AND pb.player_id=? AND pa.player_uitgedaagd=0 AND pb.player_uitgedaagd=0 AND (pa.player_level=pb.player_level OR pa.player_level=pb.player_level+1)", $userid, $playerbid);
+	Query("UPDATE %%players AS pa, %%players AS pb SET pa.player_uitgedaagd=pb.player_id, pb.player_uitgedaagd=pa.player_id, pa.player_uitgedaagd_op=NOW(), pb.player_uitgedaagd_op=NOW() WHERE pa.player_id=? AND pb.player_id=? AND pa.player_uitgedaagd=0 AND pb.player_uitgedaagd=0 AND (pa.player_level=pb.player_level OR pa.player_level=pb.player_level+1)", $userid, $playerbid);
 }
 else if($Action=="uitslaginvoeren") {
-	$userid = RequireInput("username");
+	$userid = RequireInput("userid");
 	$password = RequireInput("password");
 	$scorea = RequireInput("scorea");
 	$scoreb = RequireInput("scoreb");
@@ -59,23 +59,44 @@ else if($Action=="uitslaginvoeren") {
 	
 	Query("INSERT INTO %%games (game_playera, game_playerb, game_scorea, game_scoreb, game_date) VALUES (?,(SELECT player_uitgedaagd FROM %%players WHERE player_id=?),?,?,NOW())", $userid, $userid, $scorea, $scoreb);
 	
-	Query("UPDATE %%players AS pa, %%players AS pb SET pa.player_uitgedaagd=0, pb.player_uitgedaagd=0 ".$levelChange." WHERE pa.player_id=? AND pb.player_id=pa.player_uitgedaagd AND pb.player_uitgedaagd=pa.player_id AND (pa.player_level=pb.player_level OR ABS(pa.player_level-pb.player_level)<2)", $userid);
+	Query("UPDATE %%players AS pa, %%players AS pb SET pa.player_uitgedaagd=0, pb.player_uitgedaagd=0, pb.player_uitgedaagd_op=NULL, pa.player_uitgedaagd_op=NULL ".$levelChange." WHERE pa.player_id=? AND pb.player_id=pa.player_uitgedaagd AND pb.player_uitgedaagd=pa.player_id AND (pa.player_level=pb.player_level OR ABS(pa.player_level-pb.player_level)<2)", $userid);
 	Query("COMMIT");
+}
+else if($Action=="register") {
+	$reg_username = RequireInput("reg_username");
+	$reg_password = RequireInput("reg_password");
+	RequireValidPassword($reg_username, $reg_password);
 		
+	Query("LOCK TABLES %%players WRITE");
+	Query("START TRANSACTION");
+	$levelCounts = Query("SELECT player_level, COUNT(player_id) AS lcount FROM %%players GROUP BY player_level ORDER BY lcount DESC LIMIT 0,1");
+	$newLevel = $levelCounts[0]->player_level;
+	if($levelCounts[0]->lcount >= ($levelCounts[0]->player_level+1)) {
+		// Nieuw level maken, deze is vol
+		$newLevel++;
+	}
+	
+	Query("INSERT INTO %%players (player_name, player_level, player_uitgedaagd, player_uitgedaagd_op) VALUES(?,?,0,NULL)", $reg_username, $newLevel);
+	Query("COMMIT");
+	Query("UNLOCK TABLES");
 }
 
 Head("Overzicht");
-$Players = Query("SELECT * FROM %%players ORDER BY player_level ASC");
-$Winners = Query("SELECT winner, loser, COUNT(game_id) AS times FROM %%winners GROUP BY winner, loser");
-$PlayerWon = Query("SELECT winner AS player, COUNT(*) AS times, SUM(winner_score) AS totalscore FROM %%winners GROUP BY winner");
-$PlayerLost = Query("SELECT loser AS player, COUNT(*) AS times, SUM(winner_score) AS totalscore FROM %%winners GROUP BY loser");
+$Players = Query("SELECT %%players.*, (SELECT SUM(score) FROM %%outcomes WHERE %%outcomes.player=%%players.player_id) AS saldo, (SELECT SUM(score) FROM %%outcomes_recent WHERE %%outcomes_recent.player=%%players.player_id) AS saldo_recent, (SELECT COUNT(*) FROM %%games WHERE %%games.game_playera=%%players.player_id OR %%games.game_playerb=%%players.player_id) AS ngames, (SELECT COUNT(*) FROM %%games WHERE (%%games.game_playera=%%players.player_id OR %%games.game_playerb=%%players.player_id) AND DATEDIFF(%%games.game_date,NOW())>-30) AS nrecent, (SELECT COUNT(*) FROM %%winners WHERE %%winners.winner=%%players.player_id) AS nwins, (SELECT COUNT(*) FROM %%winners WHERE %%winners.loser=%%players.player_id) AS nloses,(SELECT COUNT(*) FROM %%winners WHERE %%winners.winner=%%players.player_id AND DATEDIFF(%%winners.game_date,NOW())>-30) AS nwins_recent, (SELECT COUNT(*) FROM %%winners WHERE %%winners.loser=%%players.player_id AND DATEDIFF(%%winners.game_date,NOW())>-30) AS nloses_recent FROM %%players ORDER BY player_level ASC");
+
+/*
+LEFT JOIN %%winners_last30days AS recentwins ON recentwins.winner = %%players.player_id LEFT JOIN %%winners_last30days AS recentloses ON recentloses.loser = %%players.player_id GROUP BY %%players.player_id
+
+COALESCE(SUM(wins.winner_score)-SUM(wins.loser_score),0)+COALESCE(SUM(loses.loser_score)-SUM(loses.winner_score),0) AS saldo, 
+COALESCE(SUM(recentwins.winner_score)-SUM(recentwins.loser_score),0)+COALESCE(SUM(recentloses.loser_score)-SUM(recentloses.winner_score),0) AS saldorecent, COUNT(wins.game_id) AS nwins, COUNT(loses.game_id) AS nloses, COALESCE(COUNT(DISTINCT wins.game_id),0)+COALESCE(COUNT(DISTINCT loses.game_id),0) AS ngames, COUNT(DISTINCT recentwins.game_id) AS nwinsrecent, COUNT(recentloses.game_id) AS nlosesrecent, COALESCE(COUNT(DISTINCT recentwins.game_id),0)+COALESCE(COUNT(DISTINCT recentloses.game_id),0) AS nrecent
+*/
+
+$Winners = Query("SELECT winner, loser, COUNT(DISTINCT game_id) AS times FROM %%winners GROUP BY winner, loser");
 $Games = Query("SELECT game_playera, game_playerb, playera.player_name AS aname, playerb.player_name AS bname, game_scorea, game_scoreb, DATE_FORMAT(game_date,'%d-%m-%Y') AS game_date FROM %%games LEFT JOIN %%players AS playera ON playera.player_id=game_playera LEFT JOIN %%players AS playerb ON playerb.player_id=game_playerb ORDER BY game_date ASC");
 ?>
 
 <script type="text/javascript">
 	var winners = <?php echo JSONSerialize($Winners); ?>;
-	var player_won = <?php echo JSONSerialize($PlayerWon) ?>;
-	var player_lost = <?php echo JSONSerialize($PlayerLost) ?>;
 	var players = <?php echo JSONSerialize($Players); ?>;
 	var games = <?php echo JSONSerialize($Games); ?>;
 </script>
@@ -115,7 +136,7 @@ $Games = Query("SELECT game_playera, game_playerb, playera.player_name AS aname,
 				<input type="hidden" name="action" id="post_action" value="none" />
 				<div style="margin:5px;">
 					Naam: 
-					<select id="username" name="username" style="width:90px;" onclick="hideControlPanel();">
+					<select id="userid" name="userid" style="width:90px;" onclick="hideControlPanel();">
 						<option></option>
 						<?php
 						for($a=0;$a<count($Players);$a++) {
@@ -127,14 +148,17 @@ $Games = Query("SELECT game_playera, game_playerb, playera.player_name AS aname,
 				
 					Intermate-wachtwoord: <input type="password" name="password" style="width:90px;" />
 					
-					<input type="button" onclick="showControlPanel();return false;" value="OK" class="button" />
+					<input type="button" onclick="showControlPanel();return false;" id="login-button" value="OK" class="button" />
 					<a href="#" onclick="openRegisterForm();">Nog niet ingeschreven?</a>
 					
 					<div class="register-info" style="display:none;">
-						Heb je je nog niet ingeschreven in de piramide? Mail dan de naam van je Intermate-account en eventueel een gewenste
-						spelersnaam naar de sportcommissie. Als je nog geen foto hebt ingesteld op de Intermate-website, kun je dat ook meteen
-						doen. De sportcommissie zal je dan zo snel mogelijk onderaan de piramide toevoegen. Schrijf je dus snel in, want hoe later
-						je inschrijft, hoe meer spelers er boven je staan...
+						<span class="explanation">Om mee te kunnen doen aan deze competitie, heb je een account nodig op de Intermate-website. Heb je die nog niet? Registreer je dan eerst <a href="http://www.intermate.nl/user/register">hier</a> voordat je hier verder gaat. Mocht je een probleem hebben met inschrijven voor deze competitie, neem dan contact op met het InterTEAM of de <a href="http://www.intermate.nl/commissies/pcwc">PCWC</a>. </span>
+						<ul>
+							<li>Je (bestaande) Intermate gebruikersnaam: <input type="text" name="reg_username"/></li>
+							<li>Bijbehorend wachtwoord: <input type="text" name="reg_password" /></li>
+						</ul>
+						<span>Door op registreren te klikken ga je akkoord met de spelregels en word je toegevoegd aan deze competitie.
+						<input type="submit" value="Registeren" />
 					</div>
 				</div>
 			
@@ -168,13 +192,14 @@ $Games = Query("SELECT game_playera, game_playerb, playera.player_name AS aname,
 		<div id="player-naam"></div>
 		<table>
 			<tr><td colspan="2"></td></td>
-			<tr><td>Doelsaldo:</td><td><span id="doelsaldo"></span></td></tr>
-			<tr><td>Gewonnen:</td><td><span id="games-gewonnen"></span></td></tr>
-			<tr><td>Verloren:</td><td><span id="games-verloren"></span></td></tr>
+			<tr><td class="left">Games gespeeld:</td><td><span id="games-aantal"></span> (<span id="games-aantal-recent"></span> <abbr title="Afgelopen 30 dagen">deze maand</abbr>)</td></tr>
+			<tr><td class="left">Doelsaldo:</td><td><span id="doelsaldo"></span> (<span id="doelsaldo-recent"></span> <abbr title="Afgelopen 30 dagen">deze maand</abbr>)</td></tr>
+			<tr><td class="left">Gewonnen:</td><td><span id="games-gewonnen"></span> (<span id="games-gewonnen-recent"></span> <abbr title="Afgelopen 30 dagen">deze maand</abbr>)</td></tr>
+			<tr><td class="left">Verloren:</td><td><span id="games-verloren"></span> (<span id="games-verloren-recent"></span> <abbr title="Afgelopen 30 dagen">deze maand</abbr>)</td></tr>
 		</table>
 		<br/>
-		<div class="header">Games gespeeld</div>
 		<div id="games-played">
+			<div class="header" onclick="toggleGamesPlayed();">Games gespeeld</div>
 			<table cellspacing="0" cellpadding="0" id="games"><tr><td><em>Geen informatie beschikbaar</em></td></tr></table>
 		</div>
 	</div>

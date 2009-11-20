@@ -26,6 +26,7 @@ div.info {
 	width:28%;
 	top:0px;
 	left:69%;
+	display:none;
 }
 
 div.forms {
@@ -138,7 +139,13 @@ div.header {
 	background-color:#0099CC;
 	color:white;
 	font-weight:bold;	
+	text-transform:uppercase;
 	padding:2px;
+}
+
+td.left {
+	color:#A0A0A0;
+	text-align:right;
 }
 
 div.register-info {
@@ -170,3 +177,27 @@ div.links a {
 div.links a:hover {
 	background-color:#EFEFEF;	
 }
+
+div.saldo-indicator {	
+	display:inline;
+}
+
+span.positive, span.negative {
+	padding-left:18px;
+	background-repeat:no-repeat;
+	background-position:left top;
+	font-weight:bold;	
+}
+
+div#games-played div.header {
+	text-decoration:underline;
+	cursor:pointer;
+}
+
+div#games-played table {
+	display:none;
+	width:100%;
+}
+
+span.positive { background-image:url('img/positive.png'); }
+span.negative { background-image:url('img/negative.png'); };

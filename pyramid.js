@@ -34,12 +34,31 @@ function removeAllChildNodesOf(elm) {
 	}	
 }
 
+function toggleGamesPlayed() {
+	$("#games-played table").toggle("slow");	
+}
+
 function findPlayerById(i) {
 	for(var w in players) {
 			if(players[w].player_id==i) {
 				return players[w];
 			}
 		}	
+}
+
+function formatSpanByNumber(span, num) {
+	$(span).removeClass("positive");
+	$(span).removeClass("negative");
+	
+	if(num>0) { $(span).addClass("positive"); }
+	else if(num<0) { $(span).addClass("negative"); }
+	else { }
+}
+
+function setScoreSpan(id, nr, isrelative) {
+	var sp = document.getElementById(id);
+	$(sp).text(nr);
+	formatSpanByNumber(sp, isrelative ? nr : 0);
 }
 
 function selectPlayer(myself) {
@@ -81,25 +100,15 @@ function selectPlayer(myself) {
 	
 	// Show stats
 	var doelsaldo = 0;
-	$(document.getElementById("games-gewonnen")).text("0");
-	for(var w in player_won) {
-		var data = player_won[w];
-		if(data.player==myself.player_id) {
-			$(document.getElementById("games-gewonnen")).text(data.times + " game(s) (+"+data.totalscore+" punten)");
-			doelsaldo = data.totalscore;
-		}		
-	}
-	
-	$(document.getElementById("games-verloren")).text("0");
-	for(var w in player_lost) {
-		var data = player_lost[w];
-		if(data.player==myself.player_id) {
-			$(document.getElementById("games-verloren")).text(data.times + " game(s) (-"+data.totalscore+" punten)");
-			doelsaldo -= data.totalscore;
-		}		
-	}
-	
-	$(document.getElementById("doelsaldo")).text(doelsaldo);
+	setScoreSpan("games-gewonnen", myself.nwins, false);
+	setScoreSpan("games-verloren", myself.nloses, false);
+	setScoreSpan("doelsaldo", myself.saldo, false);
+	setScoreSpan("doelsaldo-recent", myself.saldo_recent, true);
+	setScoreSpan("games-gewonnen-recent", myself.nwins_recent, false);
+	setScoreSpan("games-verloren-recent", myself.nloses_recent, false);
+	setScoreSpan("games-aantal", myself.ngames, false);
+	setScoreSpan("games-aantal-recent", myself.nrecent, true);
+	$(".info").show("fast");
 	
 	// Show better and worse players
 	for(var w in winners) {
@@ -118,6 +127,8 @@ function selectPlayer(myself) {
 }
 
 function openRegisterForm() {
+	hideControlPanel();
+	document.getElementById("post_action").value = "register";
 	$(".register-info").show("slow");	
 }
 
@@ -129,7 +140,7 @@ function openRegisterForm() {
   	
   	$("div.player").click(function() {
   		var myID = this.id.substr(7);
-  		var playerList = document.getElementById('username');
+  		var playerList = document.getElementById('userid');
   		hideControlPanel();
   		playerList.value = myID;
   	});
@@ -137,15 +148,18 @@ function openRegisterForm() {
  
  function hideControlPanel() {
  	$("#actions").hide();
+ 	$("#login-button").show();
  }
  
  function showControlPanel() {
  	$(".register-info").hide();
  	var otherPlayerList = document.getElementById('otherplayers');
- 	var playerList = document.getElementById('username');
+ 	var playerList = document.getElementById('userid');
  	removeAllChildNodesOf(otherPlayerList);
  	var me = findPlayerById(playerList.value);
  	hideControlPanel();
+ 	$("#login-button").hide();
+ 	
  	$(".username").text(me.player_name);
  	selectPlayer(me);
  	var kanUitdagen = (me.player_uitgedaagd==0);
