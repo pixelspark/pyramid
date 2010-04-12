@@ -1,0 +1,65 @@
+SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
+
+-- Table structure for table `squash_games`
+CREATE TABLE IF NOT EXISTS `squash_games` (
+  `game_id` int(11) NOT NULL AUTO_INCREMENT,
+  `game_playera` int(11) NOT NULL,
+  `game_playerb` int(11) NOT NULL,
+  `game_scorea` int(11) NOT NULL,
+  `game_scoreb` int(11) NOT NULL,
+  `game_date` datetime DEFAULT NULL,
+  PRIMARY KEY (`game_id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 AUTO_INCREMENT=113 ;
+
+
+-- Stand-in structure for view `squash_outcomes`
+CREATE TABLE IF NOT EXISTS `squash_outcomes` (
+`game_id` int(11)
+,`player` int(11)
+,`score` bigint(20)
+);
+
+-- Stand-in structure for view `squash_outcomes_recent`
+CREATE TABLE IF NOT EXISTS `squash_outcomes_recent` (
+`game_id` int(11)
+,`player` int(11)
+,`score` bigint(20)
+);
+
+
+-- Table structure for table `squash_players`
+CREATE TABLE IF NOT EXISTS `squash_players` (
+  `player_id` int(11) NOT NULL AUTO_INCREMENT,
+  `player_name` text NOT NULL,
+  `player_level` int(11) NOT NULL,
+  `player_uitgedaagd` int(11) NOT NULL DEFAULT '0',
+  `player_uitgedaagd_op` datetime DEFAULT NULL,
+  PRIMARY KEY (`player_id`),
+  UNIQUE KEY `player_name_unique` (`player_name`(255))
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 AUTO_INCREMENT=43 ;
+
+-- Stand-in structure for view `squash_winners`
+CREATE TABLE IF NOT EXISTS `squash_winners` (
+`game_id` int(11)
+,`winner` int(11)
+,`loser` int(11)
+,`winner_score` int(11)
+,`loser_score` int(11)
+,`game_date` datetime
+);
+
+-- Structure for view `squash_outcomes`
+DROP TABLE IF EXISTS `squash_outcomes`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`intermate_compet`@`%` SQL SECURITY DEFINER VIEW `squash_outcomes` AS (select `squash_games`.`game_id` AS `game_id`,`squash_games`.`game_playera` AS `player`,(`squash_games`.`game_scorea` - `squash_games`.`game_scoreb`) AS `score` from `squash_games`) union (select `squash_games`.`game_id` AS `game_id`,`squash_games`.`game_playerb` AS `player`,(`squash_games`.`game_scoreb` - `squash_games`.`game_scorea`) AS `score` from `squash_games`);
+
+-- Structure for view `squash_outcomes_recent`
+DROP TABLE IF EXISTS `squash_outcomes_recent`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`intermate_compet`@`%` SQL SECURITY DEFINER VIEW `squash_outcomes_recent` AS (select `squash_games`.`game_id` AS `game_id`,`squash_games`.`game_playera` AS `player`,(`squash_games`.`game_scorea` - `squash_games`.`game_scoreb`) AS `score` from `squash_games` where ((to_days(`squash_games`.`game_date`) - to_days(now())) > -(30))) union (select `squash_games`.`game_id` AS `game_id`,`squash_games`.`game_playerb` AS `player`,(`squash_games`.`game_scoreb` - `squash_games`.`game_scorea`) AS `score` from `squash_games` where ((to_days(`squash_games`.`game_date`) - to_days(now())) > -(30)));
+
+-- Structure for view `squash_winners`
+DROP TABLE IF EXISTS `squash_winners`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`intermate_compet`@`%` SQL SECURITY DEFINER VIEW `squash_winners` AS (select `squash_games`.`game_id` AS `game_id`,`squash_games`.`game_playera` AS `winner`,`squash_games`.`game_playerb` AS `loser`,`squash_games`.`game_scorea` AS `winner_score`,`squash_games`.`game_scoreb` AS `loser_score`,`squash_games`.`game_date` AS `game_date` from `squash_games` where (`squash_games`.`game_scorea` > `squash_games`.`game_scoreb`)) union (select `squash_games`.`game_id` AS `game_id`,`squash_games`.`game_playerb` AS `winner`,`squash_games`.`game_playera` AS `loser`,`squash_games`.`game_scorea` AS `loser_score`,`squash_games`.`game_scoreb` AS `winner_score`,`squash_games`.`game_date` AS `game_date` from `squash_games` where (`squash_games`.`game_scoreb` > `squash_games`.`game_scorea`));
+

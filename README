@@ -1,0 +1,5 @@
+Pyramid is an online competition tracking system, designed for large groups. The competition is organized as a pyramid: participants can challenge players in the layer above them or at their layer, and can be challenged by people below them. When the game is played, the winner takes the upper position, and the loser takes the lower one. Player can, by winning, work they way up the pyramid where there is less (but more fierce) competition. A major advantage is that players can join the competition when it is already running (they are simply added at the bottom of the pyramid).
+
+To use pyramid, you need a MySQL database and a PHP webserver. The database schema is documented in the SCHEMA file. 
+
+Furthermore, you need to have some kind of external authentication mechanism (i.e. pyramid needs to be able to verify usernames and passwords against some other source, for instance an existing website). It is trivial to integrate Pyramid with a Drupal user database, for instance. To set up authentication, change the RequireValidPassword function in include/page.inc.php. 
